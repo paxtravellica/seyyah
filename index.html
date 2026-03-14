@@ -7,63 +7,124 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 20px; }
-        #map { height: 600px; width: 100%; max-width: 1000px; margin: 0 auto; border-radius: 10px; border: 2px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .info-box { max-width: 1000px; margin: 0 auto 20px auto; padding: 15px; background: #fff; border: 1px solid #ddd; border-radius: 8px; text-align: center; }
+        .header-box { max-width: 1200px; margin: 0 auto 20px auto; padding: 15px; background: #fff; border: 1px solid #ddd; border-radius: 8px; text-align: center; }
         h2 { margin-top: 0; color: #2c3e50; }
         p { color: #555; margin-bottom: 0; }
+        
+        /* Yan Yana Düzen (Harita solda, Menü sağda) */
+        .main-container { display: flex; max-width: 1200px; margin: 0 auto; height: 600px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 10px; }
+        #map { flex: 3; border-radius: 10px 0 0 10px; border: 2px solid #ccc; border-right: none; }
+        .sidebar { flex: 1; background: #fff; padding: 25px; border: 2px solid #ccc; border-radius: 0 10px 10px 0; }
+        
+        /* Menü Tasarımı */
+        h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        select { width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; background-color: #f9f9f9; cursor: pointer; }
+        .seyyah-detay { margin-top: 25px; font-size: 15px; color: #444; line-height: 1.6; background-color: #f4f4f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
+        .seyyah-detay b { color: #2c3e50; }
     </style>
 </head>
 <body>
     
-    <div class="info-box">
-        <h2>Roger Bodenham'ın Akdeniz Seyahati (1550-1551)</h2>
-        <p>Gizli veri yöntemiyle haritaya gömülmüş tarihi rotalar.</p>
+    <div class="header-box">
+        <h2>Tarihi Seyyah Rotaları</h2>
+        <p>Sağdaki menüden bir seyyah seçerek rotasını ve özelliklerini inceleyebilirsiniz.</p>
     </div>
     
-    <div id="map"></div>
+    <div class="main-container">
+        <div id="map"></div>
+        
+        <div class="sidebar">
+            <h3>Seyyah Seçimi</h3>
+            <select id="seyyahSelect" onchange="haritayiGuncelle()">
+                <option value="roger">Roger Bodenham</option>
+                </select>
+
+            <div class="seyyah-detay" id="detayKutusu">
+                </div>
+        </div>
+    </div>
 
     <script>
         // Haritayı başlatıyoruz
         var map = L.map('map').setView([40, 10], 4);
 
-        // Tarihi harita dokusuna uygun altlık (Esri NatGeo)
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri &mdash; National Geographic'
         }).addTo(map);
 
-        // Roger Bodenham'ın rotasını barındıran gizli verimiz
-        var seyyahYolu = [
-            { isim: "Roger Bodenham", sehir: "Gravesend", yil: 1550, koordinat: [51.44214015, 0.370893611] },
-            { isim: "Roger Bodenham", sehir: "Tilbury", yil: 1551, koordinat: [51.46391064, 0.358384251] },
-            { isim: "Roger Bodenham", sehir: "Plymouth", yil: 1551, koordinat: [50.37573651, -4.142889711] },
-            { isim: "Roger Bodenham", sehir: "Cape Finisterre", yil: 1551, koordinat: [42.90314177, -9.270402346] },
-            { isim: "Roger Bodenham", sehir: "Cádiz", yil: 1551, koordinat: [36.52142185, -6.280407214] },
-            { isim: "Roger Bodenham", sehir: "Cebelitarık Boğazı", yil: 1551, koordinat: [36.14109306, -5.353768747] },
-            { isim: "Roger Bodenham", sehir: "Mayorka", yil: 1551, koordinat: [39.69584077, 3.017485432] },
-            { isim: "Roger Bodenham", sehir: "Sardunya", yil: 1551, koordinat: [40.14179118, 9.011542767] },
-            { isim: "Roger Bodenham", sehir: "Messina", yil: 1551, koordinat: [38.19413642, 15.55421673] },
-            { isim: "Roger Bodenham", sehir: "Santorini", yil: 1551, koordinat: [36.4, 25.4] },
-            { isim: "Roger Bodenham", sehir: "Mikonos", yil: 1551, koordinat: [37.44732564, 25.36642409] },
-            { isim: "Roger Bodenham", sehir: "Sakız", yil: 1551, koordinat: [38.3683234, 26.13100103] },
-            { isim: "Roger Bodenham", sehir: "Messina", yil: 1551, koordinat: [38.19413642, 15.55421673] },
-            { isim: "Roger Bodenham", sehir: "Londra", yil: 1551, koordinat: [51.50834616, -0.128377824] }
-        ];
+        // Tüm seyyahların verilerini tutan ana veri tabanımız
+        var seyyahKatalogu = {
+            "roger": {
+                isim: "Roger Bodenham",
+                renk: "#27ae60", // Senin istediğin gibi yeşil (güzel bir tonu)
+                meslek: "Deniz Kaptanı",
+                amac: "Ticaret",
+                rota: [
+                    // Seyyahın yolculuk başlangıcı
+                    { sehir: "Gravesend", yil: 1550, koordinat: [51.44214015, 0.370893611] },
+                    { sehir: "Tilbury", yil: 1551, koordinat: [51.46391064, 0.358384251] },
+                    { sehir: "Plymouth", yil: 1551, koordinat: [50.37573651, -4.142889711] },
+                    { sehir: "Cape Finisterre", yil: 1551, koordinat: [42.90314177, -9.270402346] },
+                    { sehir: "Cádiz", yil: 1551, koordinat: [36.52142185, -6.280407214] },
+                    
+                    // Senin gönderdiğin yeni koordinatlar (Enlem ve Boylam düzeltilmiş haliyle)
+                    { sehir: "Cebelitarık Boğazı", yil: 1551, koordinat: [36.14109306, -5.353768747] },
+                    { sehir: "Mayorka", yil: 1551, koordinat: [39.69584077, 3.017485432] },
+                    { sehir: "Sardunya", yil: 1551, koordinat: [40.14179118, 9.011542767] },
+                    { sehir: "Messina", yil: 1551, koordinat: [38.19413642, 15.55421673] },
+                    { sehir: "Santorini", yil: 1551, koordinat: [36.4, 25.4] },
+                    { sehir: "Mikonos", yil: 1551, koordinat: [37.44732564, 25.36642409] },
+                    { sehir: "Sakız", yil: 1551, koordinat: [38.3683234, 26.13100103] },
+                    { sehir: "Messina", yil: 1551, koordinat: [38.19413642, 15.55421673] },
+                    { sehir: "Londra", yil: 1551, koordinat: [51.50834616, -0.128377824] }
+                ]
+            }
+            // İleride diğer seyyahları buraya tek tek ekleyeceğiz
+        };
 
-        // Koordinatları sadece çizgi çizmek için ayırıyoruz
-        var cizgiNoktalari = seyyahYolu.map(s => s.koordinat);
+        // Haritadaki eski çizgileri ve pinleri temizlemek için hafıza değişkenleri
+        var aktifCizgi = null;
+        var aktifNoktalar = L.layerGroup().addTo(map);
 
-        // Çizgiyi haritaya ekle (Kırmızı renkli rota)
-        var polyline = L.polyline(cizgiNoktalari, {color: '#c0392b', weight: 4, opacity: 0.8}).addTo(map);
+        // Menüden seçim değiştiğinde çalışacak "Sihirli" Fonksiyon
+        function haritayiGuncelle() {
+            var secilenDeger = document.getElementById("seyyahSelect").value;
+            var seyyah = seyyahKatalogu[secilenDeger];
 
-        // Harita açıldığında rotayı tam ekrana sığdıracak sihirli kod
-        map.fitBounds(polyline.getBounds());
+            // Haritada eski çizgi veya noktalar varsa onları sil
+            if (aktifCizgi) { map.removeLayer(aktifCizgi); }
+            aktifNoktalar.clearLayers();
 
-        // Her bir şehre küçük bir nokta/marker koy ve bilgileri ekle
-        seyyahYolu.forEach(function(durak) {
-            L.circleMarker(durak.koordinat, {radius: 6, color: '#2c3e50', fillColor: '#fff', fillOpacity: 1})
-                .addTo(map)
-                .bindPopup("<b>" + durak.sehir + "</b><br>" + durak.isim + " (" + durak.yil + ")");
-        });
+            // Sağ taraftaki menünün içindeki detay kutusunu güncelle
+            var detayHTML = "<b>Seyyah:</b> " + seyyah.isim + "<br><br>" +
+                            "<b>Meslek:</b> " + seyyah.meslek + "<br><br>" +
+                            "<b>Amacı:</b> " + seyyah.amac + "<br><br>" +
+                            "<b>Durak Sayısı:</b> " + seyyah.rota.length;
+            document.getElementById("detayKutusu").innerHTML = detayHTML;
+
+            // Rota için koordinatları çek ve çizgiyi çiz
+            var cizgiNoktalari = seyyah.rota.map(s => s.koordinat);
+            aktifCizgi = L.polyline(cizgiNoktalari, {color: seyyah.renk, weight: 4, opacity: 0.8}).addTo(map);
+
+            // Her bir şehir için haritaya pin ekle
+            seyyah.rota.forEach(function(durak) {
+                // Pin üzerine tıklanınca açılacak kutucuk
+                var popupIcerik = "<div style='text-align:center;'><b>" + durak.sehir + " (" + durak.yil + ")</b><br>" + 
+                                  "<span style='color:#555;'>" + seyyah.isim + "</span><br>" +
+                                  "<i>" + seyyah.meslek + " - " + seyyah.amac + "</i></div>";
+
+                L.circleMarker(durak.koordinat, {radius: 6, color: '#2c3e50', fillColor: seyyah.renk, fillOpacity: 1})
+                    .addTo(aktifNoktalar)
+                    .bindPopup(popupIcerik);
+            });
+
+            // Haritayı seçilen rotaya uygun şekilde yakınlaştır
+            map.fitBounds(aktifCizgi.getBounds());
+        }
+
+        // Sayfa ilk yüklendiğinde otomatik olarak Roger Bodenham'ı göstersin
+        haritayiGuncelle();
+
     </script>
 </body>
 </html>
