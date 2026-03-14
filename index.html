@@ -2,32 +2,43 @@
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
-    <title>Seyyah - Tarihi Rotalar</title>
+    <title>Seyyah - Tarihi Rotalar ve Künyeler</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 20px; }
-        .header-box { max-width: 1200px; margin: 0 auto 20px auto; padding: 15px; background: #fff; border: 1px solid #ddd; border-radius: 8px; text-align: center; }
-        h2 { margin-top: 0; color: #2c3e50; }
-        p { color: #555; margin-bottom: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        .header-box { max-width: 1300px; margin: 0 auto 20px auto; padding: 15px; background: #fff; border-radius: 10px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h2 { color: #2c3e50; margin: 0; }
         
-        /* Yan Yana Düzen (Harita solda, Menü sağda) */
-        .main-container { display: flex; max-width: 1200px; margin: 0 auto; height: 600px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 10px; }
-        #map { flex: 3; border-radius: 10px 0 0 10px; border: 2px solid #ccc; border-right: none; }
-        .sidebar { flex: 1; background: #fff; padding: 25px; border: 2px solid #ccc; border-radius: 0 10px 10px 0; }
+        .main-container { display: flex; max-width: 1300px; margin: 0 auto; height: 750px; background: #fff; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         
-        /* Menü Tasarımı */
-        h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        select { width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; background-color: #f9f9f9; cursor: pointer; }
-        .seyyah-detay { margin-top: 25px; font-size: 15px; color: #444; line-height: 1.6; background-color: #f4f4f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
-        .seyyah-detay b { color: #2c3e50; }
+        /* Harita Alanı */
+        #map { flex: 2.5; background: #e5e3df; border-right: 1px solid #eee; }
+        
+        /* Sağ Panel (Künye Alanı) */
+        .sidebar { flex: 1; padding: 25px; display: flex; flex-direction: column; background: #ffffff; overflow-y: auto; }
+        h3 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 0; }
+        
+        /* Seçim Kutusu */
+        select { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #dcdde1; font-size: 16px; background-color: #f9f9f9; cursor: pointer; transition: 0.3s; }
+        select:hover { border-color: #3498db; }
+
+        /* Künye Sütunları/Kartları */
+        .kunye-row { margin-bottom: 15px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 5px solid #3498db; }
+        .kunye-label { display: block; font-size: 11px; text-transform: uppercase; color: #7f8c8d; font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; }
+        .kunye-value { font-size: 15px; color: #2c3e50; font-weight: 500; }
+
+        /* Rota Listesi */
+        .rota-section { margin-top: 10px; border-top: 1px solid #eee; padding-top: 15px; }
+        .rota-title { font-weight: bold; font-size: 14px; margin-bottom: 10px; display: block; color: #2c3e50; }
+        .rota-item { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px dashed #eee; color: #555; }
+        .rota-date { color: #3498db; font-weight: bold; }
     </style>
 </head>
 <body>
-    
+
     <div class="header-box">
-        <h2>Tarihi Seyyah Rotaları</h2>
-        <p>Sağdaki menüden bir seyyah seçerek rotasını ve özelliklerini inceleyebilirsiniz.</p>
+        <h2>Dijital Seyyah Arşivi</h2>
     </div>
     
     <div class="main-container">
@@ -37,94 +48,108 @@
             <h3>Seyyah Seçimi</h3>
             <select id="seyyahSelect" onchange="haritayiGuncelle()">
                 <option value="roger">Roger Bodenham</option>
-                </select>
+                <option value="locke">John Locke</option>
+                <option value="foxe">John Foxe</option>
+            </select>
 
-            <div class="seyyah-detay" id="detayKutusu">
+            <div id="kunyeGosterim">
                 </div>
         </div>
     </div>
 
     <script>
-        // Haritayı başlatıyoruz
-        var map = L.map('map').setView([40, 10], 4);
+        var map = L.map('map').setView([35, 20], 4);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; National Geographic'
-        }).addTo(map);
-
-        // Tüm seyyahların verilerini tutan ana veri tabanımız
         var seyyahKatalogu = {
             "roger": {
-                isim: "Roger Bodenham",
-                renk: "#27ae60", // Senin istediğin gibi yeşil (güzel bir tonu)
-                meslek: "Deniz Kaptanı",
-                amac: "Ticaret",
+                isim: "Roger Bodenham", renk: "#27ae60", meslek: "Deniz Kaptanı", amac: "Ticaret",
+                tarihAraligi: "1550 - 1551",
                 rota: [
-                    // Seyyahın yolculuk başlangıcı
-                    { sehir: "Gravesend", yil: 1550, koordinat: [51.44214015, 0.370893611] },
-                    { sehir: "Tilbury", yil: 1551, koordinat: [51.46391064, 0.358384251] },
-                    { sehir: "Plymouth", yil: 1551, koordinat: [50.37573651, -4.142889711] },
-                    { sehir: "Cape Finisterre", yil: 1551, koordinat: [42.90314177, -9.270402346] },
-                    { sehir: "Cádiz", yil: 1551, koordinat: [36.52142185, -6.280407214] },
-                    
-                    // Senin gönderdiğin yeni koordinatlar (Enlem ve Boylam düzeltilmiş haliyle)
-                    { sehir: "Cebelitarık Boğazı", yil: 1551, koordinat: [36.14109306, -5.353768747] },
-                    { sehir: "Mayorka", yil: 1551, koordinat: [39.69584077, 3.017485432] },
-                    { sehir: "Sardunya", yil: 1551, koordinat: [40.14179118, 9.011542767] },
-                    { sehir: "Messina", yil: 1551, koordinat: [38.19413642, 15.55421673] },
-                    { sehir: "Santorini", yil: 1551, koordinat: [36.4, 25.4] },
-                    { sehir: "Mikonos", yil: 1551, koordinat: [37.44732564, 25.36642409] },
-                    { sehir: "Sakız", yil: 1551, koordinat: [38.3683234, 26.13100103] },
-                    { sehir: "Messina", yil: 1551, koordinat: [38.19413642, 15.55421673] },
-                    { sehir: "Londra", yil: 1551, koordinat: [51.50834616, -0.128377824] }
+                    { sehir: "Gravesend", tarih: "1550", koor: [51.44, 0.37] },
+                    { sehir: "Cebelitarık", tarih: "1551", koor: [36.14, -5.35] },
+                    { sehir: "Mayorka", tarih: "1551", koor: [39.69, 3.01] },
+                    { sehir: "Santorini", tarih: "1551", koor: [36.4, 25.4] },
+                    { sehir: "Londra", tarih: "1551", koor: [51.50, -0.12] }
+                ]
+            },
+            "locke": {
+                isim: "John Locke", renk: "#2980b9", meslek: "Gemi Kaptanı", amac: "Hac (Pilgrimage)",
+                tarihAraligi: "1553 - 1554",
+                rota: [
+                    { sehir: "Cadiz", tarih: "26 Mart 1553", koor: [36.52, -6.28] },
+                    { sehir: "Venedik", tarih: "Mayıs 1553", koor: [45.44, 12.31] },
+                    { sehir: "Limasol", tarih: "14 Ağustos 1553", koor: [34.67, 33.04] },
+                    { sehir: "Kudüs", tarih: "Eylül 1553", koor: [31.76, 35.21] },
+                    { sehir: "Venedik", tarih: "02 Ocak 1554", koor: [45.44, 12.31] }
+                ]
+            },
+            "foxe": {
+                isim: "John Foxe", renk: "#e67e22", meslek: "Topçu (Master Gunner)", amac: "Esaret (Captivity)",
+                tarihAraligi: "1563",
+                rota: [
+                    { sehir: "İskenderiye", tarih: "1563", koor: [31.20, 29.91] }
                 ]
             }
-            // İleride diğer seyyahları buraya tek tek ekleyeceğiz
         };
 
-        // Haritadaki eski çizgileri ve pinleri temizlemek için hafıza değişkenleri
         var aktifCizgi = null;
         var aktifNoktalar = L.layerGroup().addTo(map);
 
-        // Menüden seçim değiştiğinde çalışacak "Sihirli" Fonksiyon
         function haritayiGuncelle() {
-            var secilenDeger = document.getElementById("seyyahSelect").value;
-            var seyyah = seyyahKatalogu[secilenDeger];
+            var val = document.getElementById("seyyahSelect").value;
+            var s = seyyahKatalogu[val];
 
-            // Haritada eski çizgi veya noktalar varsa onları sil
-            if (aktifCizgi) { map.removeLayer(aktifCizgi); }
+            if (aktifCizgi) map.removeLayer(aktifCizgi);
             aktifNoktalar.clearLayers();
 
-            // Sağ taraftaki menünün içindeki detay kutusunu güncelle
-            var detayHTML = "<b>Seyyah:</b> " + seyyah.isim + "<br><br>" +
-                            "<b>Meslek:</b> " + seyyah.meslek + "<br><br>" +
-                            "<b>Amacı:</b> " + seyyah.amac + "<br><br>" +
-                            "<b>Durak Sayısı:</b> " + seyyah.rota.length;
-            document.getElementById("detayKutusu").innerHTML = detayHTML;
+            // Sütunlu/Kartlı Künye Tasarımı
+            var kunyeHTML = `
+                <div class="kunye-row">
+                    <span class="kunye-label">Seyyah İsmi</span>
+                    <span class="kunye-value">${s.isim}</span>
+                </div>
+                <div class="kunye-row" style="border-left-color: #9b59b6;">
+                    <span class="kunye-label">Meslek</span>
+                    <span class="kunye-value">${s.meslek}</span>
+                </div>
+                <div class="kunye-row" style="border-left-color: #e67e22;">
+                    <span class="kunye-label">Seyahat Amacı</span>
+                    <span class="kunye-value">${s.amac}</span>
+                </div>
+                <div class="kunye-row" style="border-left-color: #2ecc71;">
+                    <span class="kunye-label">Seyahat Tarihi</span>
+                    <span class="kunye-value">${s.tarihAraligi}</span>
+                </div>
+                
+                <div class="rota-section">
+                    <span class="rota-title">Gidilen Duraklar</span>
+                    ${s.rota.map(d => `
+                        <div class="rota-item">
+                            <span>${d.sehir}</span>
+                            <span class="rota-date">${d.tarih}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById("kunyeGosterim").innerHTML = kunyeHTML;
 
-            // Rota için koordinatları çek ve çizgiyi çiz
-            var cizgiNoktalari = seyyah.rota.map(s => s.koordinat);
-            aktifCizgi = L.polyline(cizgiNoktalari, {color: seyyah.renk, weight: 4, opacity: 0.8}).addTo(map);
+            var pts = s.rota.map(p => p.koor);
+            if(pts.length > 1) {
+                aktifCizgi = L.polyline(pts, {color: s.renk, weight: 5, opacity: 0.7}).addTo(map);
+                map.fitBounds(aktifCizgi.getBounds(), {padding: [50, 50]});
+            } else {
+                map.setView(pts[0], 6);
+            }
 
-            // Her bir şehir için haritaya pin ekle
-            seyyah.rota.forEach(function(durak) {
-                // Pin üzerine tıklanınca açılacak kutucuk
-                var popupIcerik = "<div style='text-align:center;'><b>" + durak.sehir + " (" + durak.yil + ")</b><br>" + 
-                                  "<span style='color:#555;'>" + seyyah.isim + "</span><br>" +
-                                  "<i>" + seyyah.meslek + " - " + seyyah.amac + "</i></div>";
-
-                L.circleMarker(durak.koordinat, {radius: 6, color: '#2c3e50', fillColor: seyyah.renk, fillOpacity: 1})
+            s.rota.forEach(function(d) {
+                L.circleMarker(d.koor, {radius: 8, color: '#fff', weight: 2, fillColor: s.renk, fillOpacity: 1})
                     .addTo(aktifNoktalar)
-                    .bindPopup(popupIcerik);
+                    .bindPopup(`<b>${d.sehir}</b><br>${d.tarih}`);
             });
-
-            // Haritayı seçilen rotaya uygun şekilde yakınlaştır
-            map.fitBounds(aktifCizgi.getBounds());
         }
 
-        // Sayfa ilk yüklendiğinde otomatik olarak Roger Bodenham'ı göstersin
         haritayiGuncelle();
-
     </script>
 </body>
 </html>
